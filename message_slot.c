@@ -3,6 +3,12 @@
 #undef MODULE
 #define MODULE
 
+#define MAJOR_NUM 235
+// #define DEVICE_RANGE_NAME "char_dev"
+#define BUF_LEN 80
+#define DEVICE_FILE_NAME "message_slot_dev"
+#define SUCCESS 0
+
 #include <linux/kernel.h>   
 #include <linux/module.h>   
 #include <linux/fs.h>       /* for register_chrdev */
@@ -11,9 +17,13 @@
 
 MODULE_LICENSE("GPL");
 
+static int device_open(struct inode* inode, struct file* file);
+static ssize_t device_read(struct file* file, char __user* buffer,size_t length, loff_t* offset);
+static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t* offset);
+static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long ioctl_param);
 
 //================== DEVICE FUNCTIONS ===========================
-static int device_open( struct inode* inode, struct file*  file )
+static int device_open(struct inode* inode, struct file* file)
 {
     return 0;
 }
@@ -30,7 +40,6 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     return 0;
 }
  
-
 static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long ioctl_param)
 {
   return 0;
@@ -50,7 +59,6 @@ static int __init message_slot_init(void)
 {
     return 0;
 }
-
 
 static void __exit message_slot_cleanup(void)
 {
