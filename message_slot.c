@@ -115,10 +115,6 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
  
 static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned long channel_id)
 {
-    // What this method should do: invoking the ioctl() sets the file descriptor’s (of the message_slot device) channel id. 
-    // Subsequent reads/writes on this file descriptor (i.e. this message_slot) will receive/send
-    // messages on the specified channel.
-
     int status = 0;
     int minor_num;
     ch_node* phead;
