@@ -49,19 +49,16 @@ ch_node* get_channel_ptr(unsigned long channel_id, ch_node* phead)
 
 int create_and_append(unsigned long channel_id, ch_node* phead)
 {
-    int status;
     ch_node new_channel;
     ch_node* pcurr = phead;
 
-    // trying to allocate memory for a new ch_node. On error kmalloc returns NULL and sets errno
+    // Trying to allocate memory for a new ch_node. On error kmalloc returns NULL and sets errno
     &new_channel = kmalloc(sizeof(ch_node), GFP_KERNEL);
     if(&new_channel == NULL)
     {
-        printk(KERN_ERR "Failed to allocate memory for new channel\n");
         return -1;
     }
-
-    // Creating new ch_node
+    // New ch_node successfully allocated - now filling in its attributes 
     new_channel.id = channel_id;
     new_channel.next = NULL;
     new_channel.msg_len = 0;
@@ -74,8 +71,7 @@ int create_and_append(unsigned long channel_id, ch_node* phead)
     }
     // Now pcurr is a pointer to the last ch_node in the LL
     pcurr.next = &new_channel;
-    // Returning pointer to newly created ch_node
-    return &new_channel; 
+    return SUCCESS;
 }
 
 
@@ -123,6 +119,7 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned
     // Subsequent reads/writes on this file descriptor (i.e. this message_slot) will receive/send
     // messages on the specified channel.
 
+    int status = 0;
     int minor_num;
     ch_node* phead;
 
@@ -147,12 +144,15 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned
     phead = devices_array[minor_num];
     if(get_channel_ptr(channel_id, phead) == NULL)
     {
-        create_and_append(channel_id, phead);
+        status = create_and_append(channel_id, phead);
+        if(status == -1)
+        {
+            printk(KERN_ERR "Failed to allocate memory for new channel\n");
+            return -1;
+        }
     }
-
-
-    
-    return 0;
+    // If we got here, new channel was successfully added!
+    return SUCCESS;
 }
 
 //==================== DEVICE SETUP =============================
