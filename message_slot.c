@@ -3,8 +3,7 @@
 #undef MODULE
 #define MODULE
 
-#define MAJOR_NUM 235
-// #define DEVICE_RANGE_NAME "char_dev"
+#define DEVICE_RANGE_NAME "char_dev"
 #define BUF_LEN 80
 #define DEVICE_FILE_NAME "message_slot_dev"
 #define SUCCESS 0
@@ -40,9 +39,18 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     return 0;
 }
  
-static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long ioctl_param)
+static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned long ioctl_param)
 {
-  return 0;
+    switch(ioctl_command) 
+    {
+        case MESSAGE_SLOT_CHANNEL:
+            printk(KERN_INFO "message slot: ioctl command MESSAGE_SLOT_CHANNEL received with param: %lu\n", ioctl_param);
+            // Handle the command here, e.g., set the channel number
+            break;
+        default:
+            return -EINVAL; // Invalid command
+    }
+    return 0;
 }
 
 //==================== DEVICE SETUP =============================

@@ -4,10 +4,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "message_slot.h"
+
 int main(int argc, char* argv)
 {
     char* file_path;
-    int channel_id;
+    unsigned long channel_id;
     char* message;
     int msg_slot_fd;
     int ret_val;
@@ -31,12 +33,21 @@ int main(int argc, char* argv)
     }
 
     // 2. Set the channel id to the id specified on the command line
-    // 3. Write the specified message to the message slot file. Don’t include the terminating null character
-    // of the C string as part of the message.
-    
+    if (ioctl(msg_slot_fd, MESSAGE_SLOT_CHANNEL, channel_id) == -1) 
+    {
+        perror("Error in setting channel");
+        exit(1); 
+    }
+    printf("Channel set successfully with id %lu\n", channel_id);
+    // 3. Read a message from the message slot file to a buffer.
+
+
     // 4. Close the device.
     close(msg_slot_fd);
-    // 5. Exit the program with exit value 0.
+    // 5. Print the message to standard output (using the write() system call). Print only the message,
+    // without any additional text.
+    
+    // 6. Exit the program with exit value 0.
     exit(0);
     return 0; // do I need this if I already have exit(0)?
 }
