@@ -11,4 +11,12 @@
 #define SUCCESS 0
 #define FAILURE 1
 
+typedef struct channel_node
+{
+    struct channel_node next;
+    int msg_len; // actual length of message - bounded by 128 bytes
+    char msg[BUF_LEN]; // the message
+    unsigned long id; // this not the message_slot minor, so is not bounded in size
+} ch_node ; 
+
 #endif

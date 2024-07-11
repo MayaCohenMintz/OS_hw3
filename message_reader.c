@@ -40,6 +40,7 @@ int main(int argc, char* argv)
     }
     printf("Channel set successfully with id %lu\n", channel_id);
     // 3. Read a message from the message slot file to a buffer.
+    
 
 
     // 4. Close the device.
