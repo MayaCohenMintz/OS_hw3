@@ -79,23 +79,22 @@ int create_and_append(unsigned long channel_id, ch_node* phead)
 //================== DEVICE FUNCTIONS IMPLEMENTATION ===========================
 static int device_open(struct inode* inode, struct file* file)
 {
-    // ensures that the ch_node pointer of this message_slot device is instantiated.
+    // Ensures that the ch_node pointer of this message_slot device is instantiated.
     // channel addition happens in device_ioctl
     int minor_num;
-    ch_node* phead; // pointer to head of LL
+    ch_node* psentinel; // pointer to sentinel of LL
     // getting open file's minor:
     minor_num = iminor(inode);
-    phead = devices_array[minor_num];
-    if(phead == NULL)
+    psentinel = devices_array[minor_num];
+    if(psentinel == NULL)
     {
-        // this message_slot device was not yet opened. creating a dummy head ch_node with id = -1
-        // (will be filled in properly in subsequent stages)
-        ch_node head;
-        head.next = NULL;
-        head.id = -1;
-        head.msg = "";
-        head.msg_len = 0;
-        phead = &head; // updating the pointer in devices_array[minor_number]
+        // this message_slot device was not yet opened. creating a sentinel ch_node with id = -1
+        ch_node sentinel;
+        sentinel.next = NULL;
+        sentinel.id = -1;
+        sentinel.msg = NULL;
+        sentinel.msg_len = -1;
+        psentinel = &psentinel; // updating the pointer in devices_array[minor_number]
     }
     printk("Successfully invoked device_open(%p,%p)\n", inode, file);
     return SUCCESS;
@@ -117,12 +116,12 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned
 {
     int status = 0;
     int minor_num;
-    ch_node* phead;
+    ch_node* psentinel;
 
     // Validate input
     if(ioctl_command != MESSAGE_SLOT_CHANNEL)
     {
-        printk(KERN_INFO "Invalid ioctl command: command was %lu and not MESSAGE_SLOT_CHANNEL\n", ioctl_param);
+        printk(KERN_INFO "Invalid ioctl command: command was %lu and not MESSAGE_SLOT_CHANNEL\n", channel_id);
         errno = EINVAL; 
         return -1;
     }
@@ -137,10 +136,10 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned
     file -> private_data = (void*)channel_id; 
     // Check if the channel is in the linked list, if not create a ch_node for it
     minor_num = iminor(file_inode(file)); // get minor number of the message_slot device that invoked the ioctl
-    phead = devices_array[minor_num];
-    if(get_channel_ptr(channel_id, phead) == NULL)
+    psentinel = devices_array[minor_num];
+    if(get_channel_ptr(channel_id, psentinel) == NULL)
     {
-        status = create_and_append(channel_id, phead);
+        status = create_and_append(channel_id, psentinel);
         if(status == -1)
         {
             printk(KERN_ERR "Failed to allocate memory for new channel\n");
@@ -152,7 +151,7 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned
 }
 
 //==================== DEVICE SETUP =============================
-struct file_operations Fops = {
+struct file_operations fops = {
   .owner = THIS_MODULE, 
   .read = device_read,
   .write = device_write,
@@ -163,6 +162,18 @@ struct file_operations Fops = {
 // Initialize the module - Register the character device
 static int __init message_slot_init(void)
 {
+    int rc = -1;
+    rc = register_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME, &fops);
+    if(rc < 0)
+    {
+        printk(KERN_ALERT "%s registration failed for %d\n", DEVICE_FILE_NAME, MAJOR_NUM);
+        return rc;
+    }
+    printk("Successful registration!");
+    printk("To talk to the device driver, you must create a device file:\n" );
+    printk("mknod /dev/%s c %d 0\n", DEVICE_FILE_NAME, MAJOR_NUM);
+    printk("You can echo/cat to/from the device file.\n");
+    printk("Don't forget to rm the device file and ""rmmod when you're done\n");
     return 0;
 }
 
