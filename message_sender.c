@@ -1,6 +1,6 @@
-#include <fcntl.h>      /* open */ 
-#include <unistd.h>     /* exit */
-#include <sys/ioctl.h>  /* ioctl */
+#include <fcntl.h>     
+#include <unistd.h>     
+#include <sys/ioctl.h> 
 #include <stdio.h>
 #include <stdlib.h>
 
