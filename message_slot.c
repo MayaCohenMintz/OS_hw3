@@ -21,14 +21,14 @@ ch_node* get_channel_ptr(unsigned long channel_id, ch_node* psentinel); // retur
 // channel id exists
 int create_and_append(unsigned long channel_id, ch_node* psentinel); // create new ch_node with the channel_id and
 // append to end of LL. Returns 0 on success and -1 on failure
-
-// free channel (that specific channel only? shouldn't there be something recursive here since it
-// is a LL?)
+void free_ch_node(ch_node* node); // re;eases memory associated with a single ch_node
+void free_cell(ch_node* psentinel); //recursively releases linked list in cell of devices_array
 
 static int device_open(struct inode* inode, struct file* file);
 static ssize_t device_read(struct file* file, char __user* buffer,size_t length, loff_t* offset);
 static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t* offset);
 static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long ioctl_param);
+static int device_release(struct inode* inode, struct file* file);
 
 //================== HELPER FUNCTIONS IMPLEMENTATION ===========================
 
@@ -72,6 +72,23 @@ int create_and_append(unsigned long channel_id, ch_node* psentinel)
     return SUCCESS;
 }
 
+void free_ch_node(ch_node* node)
+{
+    kfree(node);
+}
+
+
+void free_cell(ch_node* psentinel)
+{
+    // Recursive function to free all memory allocated to linked list
+    ch_node* head = psentinel;
+    while(head != NULL)
+    {
+        free_cell(head.next); // recursion - get to tail, then go backwards
+        free_ch_node(head);
+    }
+
+}
 
 
 //================== DEVICE FUNCTIONS IMPLEMENTATION ===========================
@@ -244,13 +261,30 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned
     return SUCCESS;
 }
 
+static int device_release(struct inode* inode, struct file* file)
+{
+    // NOTE: this method frees memory associated with a specific message slot device file, i.e.
+    // a single cell in devices_array
+    // returns 0 on success
+    int status;
+    unsigned long minor_num;
+    ch_node* psentinel;
+
+    minor_num = iminor(inode);
+    psentinel = devices_array[minor_num];
+    free_cell(psentinel);
+    return SUCCESS;
+}
+
+
 //==================== DEVICE SETUP =============================
 struct file_operations fops = {
   .owner = THIS_MODULE, 
   .read = device_read,
   .write = device_write,
   .open = device_open,
-  .ioctl = device_ioctl
+  .ioctl = device_ioctl,
+  .release = device_release;
 };
 
 // Initialize the module - Register the character device
@@ -273,9 +307,23 @@ static int __init message_slot_init(void)
 
 static void __exit message_slot_cleanup(void)
 {
-    // Implement last to make sure all memory is freed! 
-    // Check if it may be better to free memory in other places too.
-    return 0;
+    int i;
+    int status;
+    ch_node* psentinel;
+
+    // Unregistering the device
+    unregister_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME);
+
+    // Each cell in devices_array is freed by device_release when that file is closed,
+    // here just making sure
+    for(i = 0; i < BUF_LEN; i++)
+    {
+        psentinel = devices_array[i];
+        if(psentinel != NULL)
+        {
+            free_cell(psentinel);
+        }
+    }
 }
 
 

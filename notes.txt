@@ -1,0 +1,5 @@
+COME BACK TO LATER
+Remember that processes aren’t trusted. Verify arguments to file operations and return -1 with
+errno set to EINVAL if the arguments are invalid. In particular, check the validity of user space
+buffers.
+
