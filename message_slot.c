@@ -141,18 +141,17 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
         return -ENOSPC;
     }
 
-    // Reading message. No need for dynamic memory allocation for message since the msg attribute is set 
-    // to be of size BUF_LEN upon initiation
-    for(i = 0; i < length; i++)
+    // Reading message
+    for(i = 0; i < ptarget -> msg_len; i++)
     {
         status = get_user(&buffer[i], ptarget -> msg[i])
         if(status == -1)
         {
-            printk(KERN_ERR "Failed to write message from channel to user buffer\n");
+            printk(KERN_ERR "Failed to read message from channel\n");
             return -EFAULT;
         }
     }
-    return SUCCESS;
+    return ptarget -> msg; // returning number of bytes read
 }
 
 // a processs which has already opened the device file attempts to write to it
@@ -203,7 +202,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     }
     ptarget -> msg_len = length;
     // Note that there is no need for overwriting previous messages since next read() will only read msg_len bytes. 
-    return SUCCESS;
+    return length; // returning number of bytes written
 }
  
 static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned long channel_id)
