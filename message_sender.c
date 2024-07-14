@@ -15,21 +15,31 @@ int main(int argc, char* argv[])
     int num_bytes_written;
     
     // Validate that 3 command line arguments were passed
-    if(argc != 3)
+    if(argc != 4) // argv[0] is name of program
     {
         perror("Number of arguments was not 3\n");
         return -1;
     }
 
-    argv[1] = file_path;
-    argv[2] = channel_id;
-    argv[3] = message;
+    printf("argv[0] is: %s\n", argv[0]);
+
+    file_path = argv[1];
+    channel_id = (unsigned long)argv[2];
+    message = argv[3];
+
+    // debugging
+    printf("argv[1] should be filepath and is actually: %s", argv[1]);
+    printf("argv[2] should be channel id and is actually: %lu", (unsigned long)argv[2]);
+    printf("argv[3] should be message and is actually: %s", argv[3]);
+
 
     // 1. Open specified message slot device file
     msg_slot_fd = open(file_path, O_RDWR);
-    if(msg_slot_fd < 0)
+    printf("msg_slot_fd: %i\n", msg_slot_fd);
+    printf("file_path: %s", file_path);
+    if(msg_slot_fd == -1)
     {
-        perror("Error in opening device file\n");
+        perror("Error in opening device file");
         exit(1);
     }
 

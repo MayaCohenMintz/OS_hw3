@@ -1,5 +1,5 @@
-#ifndef MSG_SLOT_H
-#define MSG_SLOT_H
+#ifndef MESSAGE_SLOT
+#define MESSAGE_SLOT
 
 #include <linux/ioctl.h>
 

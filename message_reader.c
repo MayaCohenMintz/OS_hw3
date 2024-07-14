@@ -1,4 +1,4 @@
-#include <fcntl.h>      
+ #include <fcntl.h>      
 #include <unistd.h>     
 #include <sys/ioctl.h>  
 #include <stdio.h>
@@ -17,14 +17,14 @@ int main(int argc, char* argv[])
     int num_bytes_written; 
 
     // Validate that 2 command line arguments were passed
-    if(argc != 2)
-    {
+    if(argc != 3) // argv[0] is name of program
+    { 
         perror("Number of arguments was not 2\n");
         return -1;
     }
 
-    argv[1] = file_path;
-    argv[2] = channel_id;
+    file_path = argv[1];
+    channel_id = argv[2];
  
     // 1. Open specified message slot device file
     msg_slot_fd = open(file_path, O_RDWR);
