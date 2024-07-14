@@ -41,34 +41,34 @@ ch_node* get_channel_ptr(unsigned long channel_id, ch_node* psentinel)
         {
             return pcurr;
         }
-        pcurr = pcurr.next;
+        pcurr = pcurr -> next;
     }
     return NULL;
 }
 
 int create_and_append(unsigned long channel_id, ch_node* psentinel)
 {
-    ch_node new_channel;
+    ch_node* pnew_channel;
     ch_node* pcurr = psentinel;
 
     // Trying to allocate memory for a new ch_node. On error kmalloc returns NULL and sets errno
-    &new_channel = kmalloc(sizeof(ch_node), GFP_KERNEL);
-    if(&new_channel == NULL)
+    pnew_channel = kmalloc(sizeof(ch_node), GFP_KERNEL);
+    if(pnew_channel == NULL)
     {
         return -1;
     }
     // New ch_node successfully allocated - now filling in its attributes 
-    new_channel.id = channel_id;
-    new_channel.next = NULL;
-    new_channel.msg_len = 0;
+    pnew_channel -> id = channel_id;
+    pnew_channel -> next = NULL;
+    pnew_channel -> msg_len = 0;
 
     // Getting to last node of LL 
-    while(pcurr.next != NULL)
+    while(pcurr -> next != NULL)
     {
-        pcurr = pcurr.next;
+        pcurr = pcurr -> next;
     }
     // Now pcurr is a pointer to the last ch_node in the LL
-    pcurr.next = &new_channel;
+    pcurr -> next = pnew_channel;
     return SUCCESS;
 }
 
@@ -81,11 +81,11 @@ void free_ch_node(ch_node* node)
 void free_cell(ch_node* psentinel)
 {
     // Recursive function to free all memory allocated to linked list
-    ch_node* head = psentinel;
-    while(head != NULL)
+    ch_node* phead = psentinel;
+    while(phead != NULL)
     {
-        free_cell(head.next); // recursion - get to tail, then go backwards
-        free_ch_node(head);
+        free_cell(phead -> next); // recursion - get to tail, then go backwards
+        free_ch_node(phead);
     }
 
 }
@@ -106,13 +106,16 @@ static int device_open(struct inode* inode, struct file* file)
     if(psentinel == NULL)
     {
         // this message_slot device was not yet opened. creating a sentinel ch_node with id = -1
-        ch_node sentinel;
-        sentinel.next = NULL;
-        sentinel.id = -1;
-        sentinel.msg = "sentinel";
-        sentinel.msg_len = -1;
-        // updating the pointer in devices_array[minor_number]
-        psentinel = &psentinel; 
+        psentinel = kmalloc(sizeof(ch_node), GFP_KERNEL);
+        if(psentinel == NULL)
+        {
+            return -1;
+        }
+
+        psentinel -> next = NULL;
+        psentinel -> id = -1;
+        // no need to instantiate message itself (it is a char array of length BUF_LEN)
+        psentinel -> msg_len = -1;
     }
     printk("Successfully invoked device_open(%p,%p)\n", inode, file);
     return SUCCESS;
@@ -158,10 +161,10 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
         return -ENOSPC;
     }
 
-    // Reading message
+    // Reading message (i.e. putting it from channel to user buffer)
     for(i = 0; i < ptarget -> msg_len; i++)
     {
-        status = get_user(&buffer[i], ptarget -> msg[i])
+        status = put_user(ptarget -> msg[i], &buffer[i]);
         if(status == -1)
         {
             printk(KERN_ERR "Failed to read message from channel\n");

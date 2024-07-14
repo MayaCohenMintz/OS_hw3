@@ -13,7 +13,7 @@
 
 typedef struct channel_node
 {
-    struct channel_node next;
+    struct channel_node* next;
     size_t msg_len; // actual length of message - bounded by 128 bytes
     char msg[BUF_LEN]; // the message. Note that the size is already set at instantiation (it is O(1))
     unsigned long id; // this not the message_slot minor, so is not bounded in size
