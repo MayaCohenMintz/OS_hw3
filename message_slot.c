@@ -171,7 +171,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
             return -EFAULT;
         }
     }
-    return ptarget -> msg; // returning number of bytes read
+    return ptarget -> msg_len; // returning number of bytes read
 }
 
 // a processs which has already opened the device file attempts to write to it
@@ -213,7 +213,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     // BUF_LEN upon initiation
     for(i = 0; i < length; i++)
     {
-        status = get_user(ptarget -> msg[i], &buffer[i])
+        status = get_user(ptarget -> msg[i], &buffer[i]);
         if(status == -1)
         {
             printk(KERN_ERR "Failed to write message from user buffer to channel\n");
@@ -269,7 +269,6 @@ static int device_release(struct inode* inode, struct file* file)
     // NOTE: this method frees memory associated with a specific message slot device file, i.e.
     // a single cell in devices_array
     // returns 0 on success
-    int status;
     unsigned long minor_num;
     ch_node* psentinel;
 
@@ -286,8 +285,8 @@ struct file_operations fops = {
   .read = device_read,
   .write = device_write,
   .open = device_open,
-  .ioctl = device_ioctl,
-  .release = device_release;
+  .unlocked_ioctl = device_ioctl,
+  .release = device_release
 };
 
 // Initialize the module - Register the character device
@@ -311,7 +310,6 @@ static int __init message_slot_init(void)
 static void __exit message_slot_cleanup(void)
 {
     int i;
-    int status;
     ch_node* psentinel;
 
     // Unregistering the device
