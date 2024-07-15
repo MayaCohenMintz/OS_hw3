@@ -10,7 +10,6 @@ int main(int argc, char* argv[])
 {
     char* file_path;
     unsigned long channel_id;
-    char* message;
     int msg_slot_fd;
     char buffer[BUF_LEN] = {0}; // initialized to all 0's
     int num_bytes_read; 
@@ -24,10 +23,15 @@ int main(int argc, char* argv[])
     }
 
     file_path = argv[1];
-    channel_id = argv[2];
+    channel_id = (unsigned long)argv[2];
+
+    // debugging
+    printf("argv[1] should be filepath and is actually: %s\n", argv[1]);
+    printf("argv[2] should be channel id and is actually: %lu\n", (unsigned long)argv[2]);
  
     // 1. Open specified message slot device file
     msg_slot_fd = open(file_path, O_RDWR);
+    printf("msg_slot_fd: %i\n", msg_slot_fd);
     if(msg_slot_fd < 0)
     {
         perror("Error in opening device file\n");

@@ -13,6 +13,8 @@ int main(int argc, char* argv[])
     char* message;
     int msg_slot_fd;
     int num_bytes_written;
+
+    printf("num of args is argc = %i\n", argc);
     
     // Validate that 3 command line arguments were passed
     if(argc != 4) // argv[0] is name of program
@@ -28,22 +30,23 @@ int main(int argc, char* argv[])
     message = argv[3];
 
     // debugging
-    printf("argv[1] should be filepath and is actually: %s", argv[1]);
-    printf("argv[2] should be channel id and is actually: %lu", (unsigned long)argv[2]);
-    printf("argv[3] should be message and is actually: %s", argv[3]);
+    printf("argv[1] should be filepath and is actually: %s\n", argv[1]);
+    printf("argv[2] should be channel id and is actually: %lu\n", (unsigned long)argv[2]);
+    printf("argv[3] should be message and is actually: %s\n", argv[3]);
 
 
     // 1. Open specified message slot device file
     msg_slot_fd = open(file_path, O_RDWR);
     printf("msg_slot_fd: %i\n", msg_slot_fd);
-    printf("file_path: %s", file_path);
     if(msg_slot_fd == -1)
     {
         perror("Error in opening device file");
         exit(1);
     }
 
+    printf("Now setting channel id to %lu : \n", channel_id);
     // 2. Set the channel id to the id specified on the command line
+    // printf("ioctl gives: %i \n", ioctl(msg_slot_fd, MESSAGE_SLOT_CHANNEL, channel_id));
     if (ioctl(msg_slot_fd, MESSAGE_SLOT_CHANNEL, channel_id) == -1) 
     {
         perror("Error in setting channel\n");
