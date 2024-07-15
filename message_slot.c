@@ -8,8 +8,9 @@
 #include <linux/fs.h>       /* for register_chrdev */
 #include <linux/uaccess.h>  /* for get_user and put_user */
 #include <linux/string.h>   /* for memset. NOTE - not string.h!*/
-# include <linux/slab.h>
+#include <linux/slab.h>
 #include "message_slot.h"
+
 
 MODULE_LICENSE("GPL");
 
@@ -51,6 +52,21 @@ int create_and_append(unsigned long channel_id, ch_node* psentinel)
     ch_node* pnew_channel;
     ch_node* pcurr = psentinel;
 
+    if(psentinel == NULL)
+    {
+        printk(KERN_ERR "psentinel is NULL in create_and_append\n");
+        return -1;
+    }
+
+    // debugging
+    printk("printing psentinel info BEFORE initialization: \n");
+    printk("psentinel == NULL: %i\n", psentinel == NULL);
+    printk("psentinel -> id: %lu\n", psentinel -> id);
+    printk("psentinel -> next: %p\n", psentinel -> next);
+    printk("psentinel -> msg_len: %lu\n", psentinel -> msg_len);
+    printk("psentinel -> msg: %s\n", psentinel -> msg);
+    
+
     // Trying to allocate memory for a new ch_node. On error kmalloc returns NULL and sets errno
     pnew_channel = kmalloc(sizeof(ch_node), GFP_KERNEL);
     if(pnew_channel == NULL)
@@ -61,6 +77,13 @@ int create_and_append(unsigned long channel_id, ch_node* psentinel)
     pnew_channel -> id = channel_id;
     pnew_channel -> next = NULL;
     pnew_channel -> msg_len = 0;
+
+    printk("printing psentinel info AFTER filling in attributes: \n");
+    printk("psentinel == NULL: %i\n", psentinel == NULL);
+    printk("psentinel -> id: %lu\n", psentinel -> id);
+    printk("psentinel -> next: %p\n", psentinel -> next);
+    printk("psentinel -> msg_len: %lu\n", psentinel -> msg_len);
+    printk("psentinel -> msg: %s\n", psentinel -> msg);
 
     // Getting to last node of LL 
     while(pcurr -> next != NULL)
@@ -99,17 +122,20 @@ static int device_open(struct inode* inode, struct file* file)
     int minor_num;
     ch_node* psentinel; // pointer to sentinel of LL
 
-    printk("Invoked device_open (%p,%p)\n", inode, file);
+    printk("Invoking device_open (%p,%p):\n", inode, file);
     // getting open file's minor:
     minor_num = iminor(inode);
     psentinel = devices_array[minor_num];
+    printk(KERN_INFO "psentineL == NULL: %i\n", psentinel == NULL);
+    printk(KERN_INFO "minor_num is %u\n", minor_num);
     if(psentinel == NULL)
     {
         // this message_slot device was not yet opened. creating a sentinel ch_node with id = -1
         psentinel = kmalloc(sizeof(ch_node), GFP_KERNEL);
         if(psentinel == NULL)
         {
-            return -1;
+            printk(KERN_ERR "Failed to allocate memory for sentinel ch_node\n");
+            return -ENOMEM;  
         }
 
         psentinel -> next = NULL;
@@ -232,6 +258,7 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned
     ch_node* psentinel;
 
     printk("Invoked device_ioctl (%p,%u,%ld)\n", file, ioctl_command, channel_id);
+    printk("MESSAGE_SLOT_CHANNEL: %lu", MESSAGE_SLOT_CHANNEL);
 
 
     // Validate input
@@ -240,19 +267,29 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned
         printk(KERN_INFO "Invalid ioctl command: command was %lu and not MESSAGE_SLOT_CHANNEL\n", channel_id);
         return -EINVAL;
     }
+    
     else if (channel_id == 0)
     {
         printk(KERN_INFO "Invalid channel id");
         return -EINVAL; 
     }
+    printk("channel id is: %lu (non zero)\n", channel_id);
 
     // Store the channel id to be associated with the message_slot device that invoked the ioctl:
     file -> private_data = (void*)channel_id; 
     // Check if the channel is in the linked list, if not create a ch_node for it
-    minor_num = iminor(file_inode(file)); // get minor number of the message_slot device that invoked the ioctl
+    minor_num = iminor(file_inode(file)); // get minor number of the message_slot device that invoked the ioctl (iminor returns an unsigned int)
     psentinel = devices_array[minor_num];
+    printk("minor is %u\n", minor_num);
+    printk("Now trying to do get_channel_ptr:\n");
+    if(psentinel == NULL)
+    {
+        printk("psentinel is NULL!\n");
+        return -1;
+    }
     if(get_channel_ptr(channel_id, psentinel) == NULL)
     {
+        printk("get_channel_ptr returned NULL. Trying to create new channel\n");
         status = create_and_append(channel_id, psentinel);
         if(status == -1)
         {

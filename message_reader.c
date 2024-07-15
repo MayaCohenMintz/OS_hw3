@@ -3,6 +3,7 @@
 #include <sys/ioctl.h>  
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "message_slot.h"
 

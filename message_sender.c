@@ -3,6 +3,7 @@
 #include <sys/ioctl.h> 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "message_slot.h"
 
@@ -56,7 +57,7 @@ int main(int argc, char* argv[])
 
     // 3. Write the specified message to the message slot file. Don’t include the terminating null 
     // character of the C string as part of the message.
-    num_bytes_written = write(msg_slot_fd, message, sizeof(message)); // make sure that sizeof should be used and not strlength(message)
+    num_bytes_written = write(msg_slot_fd, message, strlen(message)); // make sure that sizeof should be used and not strlength(message)
     if(num_bytes_written != sizeof(message))
     {
         perror("Error in writing message to channel");
