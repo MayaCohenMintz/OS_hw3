@@ -25,6 +25,7 @@ int create_and_append(unsigned long channel_id, ch_node* psentinel); // create n
 void free_ch_node(ch_node* node); // re;eases memory associated with a single ch_node
 void free_cell(ch_node* psentinel); //recursively releases linked list in cell of devices_array
 void print_devices_array(void); // for debugging
+void print_ch_node(ch_node* pnode); // for debugging
 
 static int device_open(struct inode* inode, struct file* file);
 static ssize_t device_read(struct file* file, char __user* buffer,size_t length, loff_t* offset);
@@ -58,15 +59,6 @@ int create_and_append(unsigned long channel_id, ch_node* psentinel)
         printk(KERN_ERR "psentinel is NULL in create_and_append\n");
         return -1;
     }
-
-    // debugging
-    printk("printing psentinel info BEFORE initialization: \n");
-    printk("psentinel -> id: %lu\n", psentinel -> id);
-    printk("psentinel -> next: %p\n", psentinel -> next);
-    printk("psentinel -> msg_len: %lu\n", psentinel -> msg_len);
-    printk("psentinel -> msg: %s\n", psentinel -> msg);
-    
-
     // Trying to allocate memory for a new ch_node. On error kmalloc returns NULL and sets errno
     pnew_channel = kmalloc(sizeof(ch_node), GFP_KERNEL);
     if(pnew_channel == NULL)
@@ -77,13 +69,6 @@ int create_and_append(unsigned long channel_id, ch_node* psentinel)
     pnew_channel -> id = channel_id;
     pnew_channel -> next = NULL;
     pnew_channel -> msg_len = 0;
-
-    printk("printing psentinel info AFTER filling in attributes: \n");
-    printk("psentinel == NULL: %i\n", psentinel == NULL);
-    printk("psentinel -> id: %lu\n", psentinel -> id);
-    printk("psentinel -> next: %p\n", psentinel -> next);
-    printk("psentinel -> msg_len: %lu\n", psentinel -> msg_len);
-    printk("psentinel -> msg: %s\n", psentinel -> msg);
 
     // Getting to last node of LL 
     while(pcurr -> next != NULL)
@@ -127,28 +112,46 @@ void print_devices_array(void)
     {
         if(devices_array[i] != NULL)
         {
-            printk("(%i) : %p", i, devices_array[i]);
+            if(devices_array[i] -> id == -5)
+            {
+                printk("SENTINEL ");
+            }
+            printk("(%i) : %p\t", i, devices_array[i]);
         }   
     }
 } 
+
+void print_ch_node(ch_node* pnode)
+{
+    printk("printing node details: \n");
+    if(pnode -> id == -5)
+    {
+        printk("SENTINEL ");
+    }
+    printk("pnode -> id: %lu   ", pnode -> id);
+    printk("pnode -> next: %p   ", pnode -> next);
+    printk("pnode -> msg_len: %lu   ", pnode -> msg_len);
+    printk("pnode -> msg: %s\n", pnode -> msg);
+}
 
 
 //================== DEVICE FUNCTIONS IMPLEMENTATION ===========================
 static int device_open(struct inode* inode, struct file* file)
 {
     // Ensures that the sentinel this message_slot device is instantiated.
+    // sentinel attributes are: id = -5, msg_len = -1
     // channel allocation happens in read/write. 
     int minor_num;
     ch_node* psentinel; // pointer to sentinel of LL
 
-    printk("Hey there. Invoking device_open (%p,%p):\n", inode, file);
+    printk("Invoking device_open (%p,%p):\n", inode, file);
     // getting open file's minor:
     minor_num = iminor(inode);
     psentinel = devices_array[minor_num];
     printk("minor_num is %u\n", minor_num);
     if(psentinel == NULL)
     {
-        printk("I am in device_open and psentinel is NULL\n");
+        printk("I am in device_open and psentinel is NULL - creating psentinel\n");
         // this message_slot device was not yet opened. creating a sentinel ch_node with id = -1
         psentinel = kmalloc(sizeof(ch_node), GFP_KERNEL);
         if(psentinel == NULL)
@@ -157,7 +160,7 @@ static int device_open(struct inode* inode, struct file* file)
             return -ENOMEM;  
         }
         psentinel -> next = NULL;
-        psentinel -> id = -1;
+        psentinel -> id = -5;
         // no need to instantiate message itself (it is a char array of length BUF_LEN)
         psentinel -> msg_len = -1;
         devices_array[minor_num] = psentinel;
@@ -165,7 +168,7 @@ static int device_open(struct inode* inode, struct file* file)
     }
     else
     {
-        printk("I am in device_open and psentinel is not NULL, rather it is: %p\n", psentinel);
+        printk("I am in device_open and psentinel is not NULL. id is %lu, should be -5\n", psentinel -> id);
     }
     print_devices_array();
     printk("Successfully invoked device_open(%p,%p). psentinel is %p\n", inode, file, psentinel);
@@ -187,7 +190,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     channel_id = (unsigned long)file -> private_data;
     psentinel = devices_array[minor_num];
 
-    printk("psentinel is: %p", psentinel);
+    printk("psentinel is: %p. id is %lu, should be -5 since this is sentinel", psentinel, psentinel -> id);
     printk("doing get_channel_ptr\n");
     // Getting pointer to the ch_node corresponding to the channel_id.
     ptarget = get_channel_ptr(channel_id, psentinel);
@@ -201,12 +204,12 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
 
     // Check if message exists on channel
     printk("checking if message exists on channel: \n");
-    if(ptarget -> msg_len == -1)
+    if(ptarget -> msg_len >= 0) // no message has been written
     {
         printk(KERN_ERR "No message exists on channel with id %lu \n", channel_id);
         return -EWOULDBLOCK;
     }
-    printk("checking buufer size: ");
+    printk("checking buffer size: ");
     // Check if provided buffer in user space is of sufficient size
     if(length > BUF_LEN)
     {
@@ -216,6 +219,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     printk("buffer size is legal\n");
 
     // Reading message (i.e. putting it from channel to user buffer)
+    printk("message to read is: %s \n", ptarget -> msg);
     printk("reading message from channel to user buffer\n");
     for(i = 0; i < ptarget -> msg_len; i++)
     {
@@ -230,7 +234,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     return ptarget -> msg_len; // returning number of bytes read
 }
 
-// a processs which has already opened the device file attempts to write to it
+
 static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t* offset)
 {
     int minor_num;
@@ -248,6 +252,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     channel_id = (unsigned long)file -> private_data;
     psentinel = devices_array[minor_num];
     printk("minor is %i, channel id is %lu, devices_array[minor_num} is %p, psentintel is %p\n", minor_num, channel_id, devices_array[minor_num], psentinel);
+    printk("psentinel id is %lu, should be -5\n", psentinel -> id);
 
     printk("doing get_channel_ptr\n");
     // Getting pointer to the ch_node corresponding to the channel_id.
