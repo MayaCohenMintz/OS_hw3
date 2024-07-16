@@ -104,22 +104,31 @@ void free_ch_node(ch_node* node)
 void free_cell(ch_node* psentinel)
 {
     // Recursive function to free all memory allocated to linked list
-    ch_node* phead = psentinel;
+    ch_node* phead;
+    ch_node* pprev;
+
+    printk("Freeing linked list iteratively: \n");
+    phead = psentinel;
     while(phead != NULL)
     {
-        free_cell(phead -> next); // recursion - get to tail, then go backwards
-        free_ch_node(phead);
+        pprev = phead;
+        phead = phead -> next;
+        free_ch_node(pprev);
     }
+    printk("finished freeing linked list\n");
 
 }
 
 void print_devices_array(void)
 {
     int i;
+    printk("printing non-null places in devices_array:   ");
     for(i = 0; i < 256; i++)
     {
-        printk("printing devices_array:   ");
-        printk("[%p] ", devices_array[i]);
+        if(devices_array[i] != NULL)
+        {
+            printk("(%i) : %p", i, devices_array[i]);
+        }   
     }
 } 
 
@@ -132,7 +141,7 @@ static int device_open(struct inode* inode, struct file* file)
     int minor_num;
     ch_node* psentinel; // pointer to sentinel of LL
 
-    printk("HI!!!!! Invoking device_open (%p,%p):\n", inode, file);
+    printk("Hey there. Invoking device_open (%p,%p):\n", inode, file);
     // getting open file's minor:
     minor_num = iminor(inode);
     psentinel = devices_array[minor_num];
@@ -163,7 +172,6 @@ static int device_open(struct inode* inode, struct file* file)
     return SUCCESS;
 }
 
-// a process which has already opened the device file attempts to read from it
 static ssize_t device_read(struct file* file, char __user* buffer, size_t length, loff_t* offset)
 {
     int minor_num;
@@ -179,6 +187,8 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     channel_id = (unsigned long)file -> private_data;
     psentinel = devices_array[minor_num];
 
+    printk("psentinel is: %p", psentinel);
+    printk("doing get_channel_ptr\n");
     // Getting pointer to the ch_node corresponding to the channel_id.
     ptarget = get_channel_ptr(channel_id, psentinel);
 
@@ -190,20 +200,23 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     }
 
     // Check if message exists on channel
+    printk("checking if message exists on channel: \n");
     if(ptarget -> msg_len == -1)
     {
         printk(KERN_ERR "No message exists on channel with id %lu \n", channel_id);
         return -EWOULDBLOCK;
     }
-
+    printk("checking buufer size: ");
     // Check if provided buffer in user space is of sufficient size
     if(length > BUF_LEN)
     {
         printk("User bufer too small for message on channel with id %lu\n", channel_id);
         return -ENOSPC;
     }
+    printk("buffer size is legal\n");
 
     // Reading message (i.e. putting it from channel to user buffer)
+    printk("reading message from channel to user buffer\n");
     for(i = 0; i < ptarget -> msg_len; i++)
     {
         status = put_user(ptarget -> msg[i], &buffer[i]);
@@ -213,6 +226,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
             return -EFAULT;
         }
     }
+    printk("number of bytes read is %zu\n", ptarget -> msg_len);
     return ptarget -> msg_len; // returning number of bytes read
 }
 
@@ -235,14 +249,15 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     psentinel = devices_array[minor_num];
     printk("minor is %i, channel id is %lu, devices_array[minor_num} is %p, psentintel is %p\n", minor_num, channel_id, devices_array[minor_num], psentinel);
 
+    printk("doing get_channel_ptr\n");
     // Getting pointer to the ch_node corresponding to the channel_id.
     ptarget = get_channel_ptr(channel_id, psentinel);
     
-
+    printk("checking if channel has been set on file descriptor\n");
     // Checking if a channel has been set on the file descriptor (i.e. if ioctl has already been called on it)
     if(ptarget == NULL) 
     {
-        printk("ptarget is NULL! \n")
+        printk("ptarget is NULL! \n");
         printk("No channel set on file descriptor\n");
         return -EINVAL;
     }
@@ -258,6 +273,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
         return -EMSGSIZE;
     }
     // Do I need more error checking here?
+    printk("message length is %zu", length);
 
     // No need for dynamic memory allocation for message since the msg attribute is set to be of size
     // BUF_LEN upon initiation
@@ -341,7 +357,7 @@ static int device_release(struct inode* inode, struct file* file)
     // minor_num = iminor(inode);
     // psentinel = devices_array[minor_num];
     // free_cell(psentinel);
-    printf("Invoking device_release \n")
+    printk("Invoking device_release \n");
     return SUCCESS;
 }
 

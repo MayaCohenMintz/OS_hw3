@@ -26,11 +26,8 @@ int main(int argc, char* argv[])
     file_path = argv[1];
     channel_id = (unsigned long)argv[2];
 
-    // debugging
-    printf("argv[1] should be filepath and is actually: %s\n", argv[1]);
-    printf("argv[2] should be channel id and is actually: %lu\n", (unsigned long)argv[2]);
- 
     // 1. Open specified message slot device file
+    printf("NOw trying to open file:\n");
     msg_slot_fd = open(file_path, O_RDWR);
     printf("msg_slot_fd: %i\n", msg_slot_fd);
     if(msg_slot_fd < 0)
@@ -40,6 +37,7 @@ int main(int argc, char* argv[])
     }
 
     // 2. Set the channel id to the id specified on the command line
+    printf("trying to invoke ioctl on msg_slot_fd = %i and channel id = %lu", msg_slot_fd, channel_id);
     if (ioctl(msg_slot_fd, MESSAGE_SLOT_CHANNEL, channel_id) == -1) 
     {
         perror("Error in setting channel\n");
@@ -48,7 +46,9 @@ int main(int argc, char* argv[])
     printf("Channel set successfully with id %lu\n", channel_id);
     // 3. Read a message from the message slot file to a buffer. 
     // (reading up to BUF_LEN bytes, so no need to know length of actual message)
+    printf("Trying to read message from buffer: \n");
     num_bytes_read = read(msg_slot_fd, buffer, BUF_LEN);
+    printf("num of bytes read is %i", num_bytes_read);
     if(num_bytes_read == -1)
     {
         perror("Error in reading from channel\n");
@@ -56,10 +56,13 @@ int main(int argc, char* argv[])
     }
     
     // 4. Close the device.
+    printf("closing device\n");
     close(msg_slot_fd);
     // 5. Print the message to standard output (using the write() system call). Print only the message,
-    // without any additional text.
+    // without any additional text
+    printf("printing to std outpud: \n");
     num_bytes_written = write(STDOUT_FILENO, buffer, num_bytes_read);
+    printf("num of bytes written to output is %i", num_bytes_written);
     if(num_bytes_written == -1)
     {
         perror("Error in writing message to std output\n");
