@@ -24,6 +24,7 @@ int create_and_append(unsigned long channel_id, ch_node* psentinel); // create n
 // append to end of LL. Returns 0 on success and -1 on failure
 void free_ch_node(ch_node* node); // re;eases memory associated with a single ch_node
 void free_cell(ch_node* psentinel); //recursively releases linked list in cell of devices_array
+void print_devices_array(void); // for debugging
 
 static int device_open(struct inode* inode, struct file* file);
 static ssize_t device_read(struct file* file, char __user* buffer,size_t length, loff_t* offset);
@@ -60,7 +61,6 @@ int create_and_append(unsigned long channel_id, ch_node* psentinel)
 
     // debugging
     printk("printing psentinel info BEFORE initialization: \n");
-    printk("psentinel == NULL: %i\n", psentinel == NULL);
     printk("psentinel -> id: %lu\n", psentinel -> id);
     printk("psentinel -> next: %p\n", psentinel -> next);
     printk("psentinel -> msg_len: %lu\n", psentinel -> msg_len);
@@ -113,23 +113,33 @@ void free_cell(ch_node* psentinel)
 
 }
 
+void print_devices_array(void)
+{
+    int i;
+    for(i = 0; i < 256; i++)
+    {
+        printk("printing devices_array:   ");
+        printk("[%p] ", devices_array[i]);
+    }
+} 
+
 
 //================== DEVICE FUNCTIONS IMPLEMENTATION ===========================
 static int device_open(struct inode* inode, struct file* file)
 {
-    // Ensures that the ch_node pointer of this message_slot device is instantiated.
-    // channel addition happens in device_ioctl
+    // Ensures that the sentinel this message_slot device is instantiated.
+    // channel allocation happens in read/write. 
     int minor_num;
     ch_node* psentinel; // pointer to sentinel of LL
 
-    printk("Invoking device_open (%p,%p):\n", inode, file);
+    printk("HI!!!!! Invoking device_open (%p,%p):\n", inode, file);
     // getting open file's minor:
     minor_num = iminor(inode);
     psentinel = devices_array[minor_num];
-    printk(KERN_INFO "psentineL == NULL: %i\n", psentinel == NULL);
-    printk(KERN_INFO "minor_num is %u\n", minor_num);
+    printk("minor_num is %u\n", minor_num);
     if(psentinel == NULL)
     {
+        printk("I am in device_open and psentinel is NULL\n");
         // this message_slot device was not yet opened. creating a sentinel ch_node with id = -1
         psentinel = kmalloc(sizeof(ch_node), GFP_KERNEL);
         if(psentinel == NULL)
@@ -137,13 +147,19 @@ static int device_open(struct inode* inode, struct file* file)
             printk(KERN_ERR "Failed to allocate memory for sentinel ch_node\n");
             return -ENOMEM;  
         }
-
         psentinel -> next = NULL;
         psentinel -> id = -1;
         // no need to instantiate message itself (it is a char array of length BUF_LEN)
         psentinel -> msg_len = -1;
+        devices_array[minor_num] = psentinel;
+        printk("devices_array[%i] is %p, and psentinel is %p", minor_num, devices_array[minor_num], psentinel);
     }
-    printk("Successfully invoked device_open(%p,%p)\n", inode, file);
+    else
+    {
+        printk("I am in device_open and psentinel is not NULL, rather it is: %p\n", psentinel);
+    }
+    print_devices_array();
+    printk("Successfully invoked device_open(%p,%p). psentinel is %p\n", inode, file, psentinel);
     return SUCCESS;
 }
 
@@ -181,7 +197,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     }
 
     // Check if provided buffer in user space is of sufficient size
-    if(sizeof(buffer) < length)
+    if(length > BUF_LEN)
     {
         printk("User bufer too small for message on channel with id %lu\n", channel_id);
         return -ENOSPC;
@@ -211,20 +227,28 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     int status;
 
     printk("Invoked device_write (%p,%p,%zu)\n", file, buffer, length);
+    print_devices_array();
 
     // Getting minor of device that invoked this + the channel id to write to 
     minor_num = iminor(file_inode(file));
     channel_id = (unsigned long)file -> private_data;
     psentinel = devices_array[minor_num];
+    printk("minor is %i, channel id is %lu, devices_array[minor_num} is %p, psentintel is %p\n", minor_num, channel_id, devices_array[minor_num], psentinel);
 
     // Getting pointer to the ch_node corresponding to the channel_id.
     ptarget = get_channel_ptr(channel_id, psentinel);
+    
 
     // Checking if a channel has been set on the file descriptor (i.e. if ioctl has already been called on it)
     if(ptarget == NULL) 
     {
+        printk("ptarget is NULL! \n")
         printk("No channel set on file descriptor\n");
         return -EINVAL;
+    }
+    else
+    {
+    printk("ptarget is %p (not NULL) and the ch_node it points to has id of %lu\n", ptarget, ptarget -> id);
     }
 
     // Checking message length is legal
@@ -237,6 +261,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 
     // No need for dynamic memory allocation for message since the msg attribute is set to be of size
     // BUF_LEN upon initiation
+    printk("Now trying to write message from user buffer to channel: \n");
     for(i = 0; i < length; i++)
     {
         status = get_user(ptarget -> msg[i], &buffer[i]);
@@ -248,6 +273,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     }
     ptarget -> msg_len = length;
     // Note that there is no need for overwriting previous messages since next read() will only read msg_len bytes. 
+    printk("num of bytes written was %zu", ptarget -> msg_len);
     return length; // returning number of bytes written
 }
  
@@ -258,6 +284,7 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned
     ch_node* psentinel;
 
     printk("Invoked device_ioctl (%p,%u,%ld)\n", file, ioctl_command, channel_id);
+    print_devices_array(); 
     printk("MESSAGE_SLOT_CHANNEL: %lu", MESSAGE_SLOT_CHANNEL);
 
 
@@ -281,6 +308,8 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned
     minor_num = iminor(file_inode(file)); // get minor number of the message_slot device that invoked the ioctl (iminor returns an unsigned int)
     psentinel = devices_array[minor_num];
     printk("minor is %u\n", minor_num);
+    printk("devices_array[%i] is %p. This should be psentinel which is %p\n", minor_num, devices_array[minor_num], psentinel);
+    print_devices_array(); 
     printk("Now trying to do get_channel_ptr:\n");
     if(psentinel == NULL)
     {
@@ -306,12 +335,13 @@ static int device_release(struct inode* inode, struct file* file)
     // NOTE: this method frees memory associated with a specific message slot device file, i.e.
     // a single cell in devices_array
     // returns 0 on success
-    unsigned long minor_num;
-    ch_node* psentinel;
+    // unsigned long minor_num;
+    // ch_node* psentinel;
 
-    minor_num = iminor(inode);
-    psentinel = devices_array[minor_num];
-    free_cell(psentinel);
+    // minor_num = iminor(inode);
+    // psentinel = devices_array[minor_num];
+    // free_cell(psentinel);
+    printf("Invoking device_release \n")
     return SUCCESS;
 }
 
