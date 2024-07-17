@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     // (reading up to BUF_LEN bytes, so no need to know length of actual message)
     printf("Trying to read message from buffer: \n");
     num_bytes_read = read(msg_slot_fd, buffer, BUF_LEN);
-    printf("num of bytes read is %i", num_bytes_read);
+    printf("num of bytes read is %i\n", num_bytes_read);
     if(num_bytes_read == -1)
     {
         perror("Error in reading from channel\n");
@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
     // without any additional text
     printf("printing to std outpud: \n");
     num_bytes_written = write(STDOUT_FILENO, buffer, num_bytes_read);
-    printf("num of bytes written to output is %i", num_bytes_written);
+    printf("\nnum of bytes written to output is %i", num_bytes_written);
     if(num_bytes_written == -1)
     {
         perror("Error in writing message to std output\n");

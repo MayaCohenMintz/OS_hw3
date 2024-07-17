@@ -14,5 +14,27 @@ for read: Invoking device_open (00000000bb26aefb,00000000023893ab)
 Same thing in iocl: the file in write is 00000000a9877c67 and in read is 00000000023893ab
 
 
-
+NEXT STEPS + QUESTIONS - CHECK ALL Qs WITH ROY!
 next step for debugging: print channel list by id + message
+add prints for cleanup method to make sure the memory is freed properly
+add prints in get_channel_ptr so I know the address of the pointer + its contents 
+
+Q: what should happen when trying to read from a channel we didn't write to yet? is that like having a message of length 0 or trying to read from a channel that has not yet been set
+
+Q: what is the meaning of channel not being set on file descriptor (as specified in possible error for read and write, and errno should be set to EINVAL)
+
+what is expected behavior when reading from channel that has not been set? and what is the difference between this and trying to read from a channel that 
+was set but has no message?
+
+Q:what is expected behavior when trying to write empty string with message_sender? I got this:
+    student@OS23:~/OS_hw3$ ./message_sender /dev/slot 2 ""                                
+    argv[2] is 2, channel id is 2. Are they the same?
+    file_path is /dev/slot
+    Now trying to invoke open
+    msg_slot_fd: 3
+    Now setting channel id to 2 : 
+    Channel set successfully with id 2
+    now trying to write message into message_slot_fd: num bytes written are -1
+    Error in writing message to channel: Message too long
+
+A: device_write should return -1 and errno set to EMSGSIZE
