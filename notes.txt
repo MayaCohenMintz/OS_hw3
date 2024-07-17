@@ -15,6 +15,8 @@ Same thing in iocl: the file in write is 00000000a9877c67 and in read is 0000000
 
 
 NEXT STEPS + QUESTIONS - CHECK ALL Qs WITH ROY!
+
+--- try to run tester.c first, it might answer some of these questions
 next step for debugging: print channel list by id + message
 add prints for cleanup method to make sure the memory is freed properly
 add prints in get_channel_ptr so I know the address of the pointer + its contents 
