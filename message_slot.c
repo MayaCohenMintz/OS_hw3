@@ -38,10 +38,12 @@ static int device_release(struct inode* inode, struct file* file);
 ch_node* get_channel_ptr(unsigned long channel_id, ch_node* psentinel)
 {
     ch_node* pcurr = psentinel;
+    printk("running get_channel_ptr: trying to find ch_node with id %lu\n", channel_id);
     while(pcurr != NULL)
     {
         if(pcurr -> id == channel_id)
         {
+            printk("Found ch_node with id %lu, with message %s (address: %p)\n", channel_id, pcurr -> msg, pcurr);
             return pcurr;
         }
         pcurr = pcurr -> next;
@@ -112,7 +114,7 @@ void print_devices_array(void)
     {
         if(devices_array[i] != NULL)
         {
-            if(devices_array[i] -> id == -5)
+            if(devices_array[i] -> id == 0)
             {
                 printk("SENTINEL ");
             }
@@ -124,13 +126,13 @@ void print_devices_array(void)
 void print_ch_node(ch_node* pnode)
 {
     printk("printing node details: \n");
-    if(pnode -> id == -5)
+    if(pnode -> id == 0)
     {
         printk("SENTINEL ");
     }
     printk("pnode -> id: %lu   ", pnode -> id);
     printk("pnode -> next: %p   ", pnode -> next);
-    printk("pnode -> msg_len: %lu   ", pnode -> msg_len);
+    printk("pnode -> msg_len: %d   ", pnode -> msg_len);
     printk("pnode -> msg: %s\n", pnode -> msg);
 }
 
@@ -139,7 +141,7 @@ void print_ch_node(ch_node* pnode)
 static int device_open(struct inode* inode, struct file* file)
 {
     // Ensures that the sentinel this message_slot device is instantiated.
-    // sentinel attributes are: id = -5, msg_len = -1
+    // sentinel attributes are: id = 0, msg_len = -1
     // channel allocation happens in read/write. 
     int minor_num;
     ch_node* psentinel; // pointer to sentinel of LL
@@ -152,7 +154,7 @@ static int device_open(struct inode* inode, struct file* file)
     if(psentinel == NULL)
     {
         printk("I am in device_open and psentinel is NULL - creating psentinel\n");
-        // this message_slot device was not yet opened. creating a sentinel ch_node with id = -1
+        // this message_slot device was not yet opened. creating a sentinel ch_node with id = 0
         psentinel = kmalloc(sizeof(ch_node), GFP_KERNEL);
         if(psentinel == NULL)
         {
@@ -160,7 +162,7 @@ static int device_open(struct inode* inode, struct file* file)
             return -ENOMEM;  
         }
         psentinel -> next = NULL;
-        psentinel -> id = -5;
+        psentinel -> id = 0;
         // no need to instantiate message itself (it is a char array of length BUF_LEN)
         psentinel -> msg_len = -1;
         devices_array[minor_num] = psentinel;
@@ -168,7 +170,7 @@ static int device_open(struct inode* inode, struct file* file)
     }
     else
     {
-        printk("I am in device_open and psentinel is not NULL. id is %lu, should be -5\n", psentinel -> id);
+        printk("I am in device_open and psentinel is not NULL. id is %lu, should be 0\n", psentinel -> id);
     }
     print_devices_array();
     printk("Successfully invoked device_open(%p,%p). psentinel is %p\n", inode, file, psentinel);
@@ -190,12 +192,20 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     channel_id = (unsigned long)file -> private_data;
     psentinel = devices_array[minor_num];
 
-    printk("psentinel is: %p. id is %lu, should be -5 since this is sentinel", psentinel, psentinel -> id);
+    // checking if the channel has been set with ioctl 
+    if(channel_id == 0) // id channel_id is 0 that means that the private_data has not yet been set in ioctl
+    {
+        printk("No channel set on file descriptor\n");
+        return -EINVAL;
+    }
+
+    printk("psentinel is: %p. id is %lu, should be 0 since this is sentinel", psentinel, psentinel -> id);
     printk("doing get_channel_ptr\n");
     // Getting pointer to the ch_node corresponding to the channel_id.
     ptarget = get_channel_ptr(channel_id, psentinel);
 
     // Checking if a channel has been set on the file descriptor (i.e. if ioctl has already been called on it)
+    // MAYA - WHAT AM I EVEN CHECKING HERE????
     if(ptarget == NULL) 
     {
         printk("No channel set on file descriptor\n");
@@ -211,7 +221,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     }
     printk("checking buffer size: ");
     // Check if provided buffer in user space is of sufficient size
-    if(length > BUF_LEN)
+    if(length < ptarget -> msg_len)
     {
         printk("User bufer too small for message on channel with id %lu\n", channel_id);
         return -ENOSPC;
@@ -230,7 +240,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
             return -EFAULT;
         }
     }
-    printk("number of bytes read is %zu\n", ptarget -> msg_len);
+    printk("number of bytes read is %d\n", ptarget -> msg_len);
     return ptarget -> msg_len; // returning number of bytes read
 }
 
@@ -250,15 +260,22 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     // Getting minor of device that invoked this + the channel id to write to 
     minor_num = iminor(file_inode(file));
     channel_id = (unsigned long)file -> private_data;
+    // checking if the channel has been set with ioctl 
+    if(channel_id == 0) // id channel_id is 0 that means that the private_data has not yet been set in ioctl
+    {
+        printk("No channel set on file descriptor\n");
+        return -EINVAL;
+    }
+
     psentinel = devices_array[minor_num];
     printk("minor is %i, channel id is %lu, devices_array[minor_num} is %p, psentintel is %p\n", minor_num, channel_id, devices_array[minor_num], psentinel);
-    printk("psentinel id is %lu, should be -5\n", psentinel -> id); // I got in terminal: psentinel id is 18446744073709551611, should be -5
+    printk("psentinel id is %lu, should be 0\n", psentinel -> id); // I got in terminal: psentinel id is 18446744073709551611, should be 0
 
     printk("doing get_channel_ptr\n");
     // Getting pointer to the ch_node corresponding to the channel_id.
     ptarget = get_channel_ptr(channel_id, psentinel);
     
-    printk("checking if channel has been set on file descriptor\n");
+    printk("checking if channel has been set on file descriptor\n"); // MAYA - WHAT AM I EVEN CHECKING HERE????
     // Checking if a channel has been set on the file descriptor (i.e. if ioctl has already been called on it)
     if(ptarget == NULL) 
     {
@@ -277,11 +294,10 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
         printk("Message length is illegal\n");
         return -EMSGSIZE;
     }
-    // Do I need more error checking here?
+    // Checking that message is not too long for user buffer:
+
     printk("message length is %zu", length);
 
-    // No need for dynamic memory allocation for message since the msg attribute is set to be of size
-    // BUF_LEN upon initiation
     printk("Now trying to write message from user buffer to channel: \n");
     for(i = 0; i < length; i++)
     {
@@ -295,7 +311,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     printk("message that was written: %s\n", ptarget -> msg);
     ptarget -> msg_len = length;
     // Note that there is no need for overwriting previous messages since next read() will only read msg_len bytes. 
-    printk("num of bytes written was %zu", ptarget -> msg_len);
+    printk("num of bytes written was %d", ptarget -> msg_len);
     return length; // returning number of bytes written
 }
  
