@@ -24,10 +24,12 @@ int main(int argc, char* argv[])
     }
 
     file_path = argv[1];
-    channel_id = (unsigned long)argv[2];
+    channel_id = (unsigned long)atoi(argv[2]);
+
+    printf("argv[2] is %s, channel id is %lu. Are they the same?\n", argv[2], channel_id);
 
     // 1. Open specified message slot device file
-    printf("NOw trying to open file:\n");
+    printf("Now trying to open file:\n");
     msg_slot_fd = open(file_path, O_RDWR);
     printf("msg_slot_fd: %i\n", msg_slot_fd);
     if(msg_slot_fd < 0)
@@ -37,7 +39,7 @@ int main(int argc, char* argv[])
     }
 
     // 2. Set the channel id to the id specified on the command line
-    printf("trying to invoke ioctl on msg_slot_fd = %i and channel id = %lu", msg_slot_fd, channel_id);
+    printf("trying to invoke ioctl on msg_slot_fd = %i and channel id = %lu\n", msg_slot_fd, channel_id);
     if (ioctl(msg_slot_fd, MESSAGE_SLOT_CHANNEL, channel_id) == -1) 
     {
         perror("Error in setting channel\n");

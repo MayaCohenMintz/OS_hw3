@@ -23,8 +23,11 @@ int main(int argc, char* argv[])
     }
 
     file_path = argv[1];
-    channel_id = (unsigned long)argv[2];
+    channel_id = (unsigned long)atoi(argv[2]);
     message = argv[3];
+
+    printf("argv[2] is %s, channel id is %lu. Are they the same?\n", argv[2], channel_id);
+    printf("file_path is %s\n", file_path);
 
     // 1. Open specified message slot device file
     printf("Now trying to invoke open\n");

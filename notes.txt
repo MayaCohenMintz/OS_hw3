@@ -3,3 +3,16 @@ Remember that processes aren’t trusted. Verify arguments to file operations an
 errno set to EINVAL if the arguments are invalid. In particular, check the validity of user space
 buffers.
 
+message_slot.c line 255: I got "psentinel id is 18446744073709551611, should be -5"
+check why the id was not set to -5
+
+what is expected behavior when reading message of length 0? does the error come from message_slot.c or message_reader?
+
+I inovked open() in message_sender then in message_reader with the same file descriptor and O_RDWR. But in kernel dmesg the inode is the same but file is different:
+for write: Invoking device_open (00000000bb26aefb,00000000a9877c67)
+for read: Invoking device_open (00000000bb26aefb,00000000023893ab)
+Same thing in iocl: the file in write is 00000000a9877c67 and in read is 00000000023893ab
+
+
+
+next step for debugging: print channel list by id + message

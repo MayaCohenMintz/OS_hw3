@@ -204,7 +204,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
 
     // Check if message exists on channel
     printk("checking if message exists on channel: \n");
-    if(ptarget -> msg_len >= 0) // no message has been written
+    if(ptarget -> msg_len <= 0) // no message has been written
     {
         printk(KERN_ERR "No message exists on channel with id %lu \n", channel_id);
         return -EWOULDBLOCK;
@@ -252,7 +252,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     channel_id = (unsigned long)file -> private_data;
     psentinel = devices_array[minor_num];
     printk("minor is %i, channel id is %lu, devices_array[minor_num} is %p, psentintel is %p\n", minor_num, channel_id, devices_array[minor_num], psentinel);
-    printk("psentinel id is %lu, should be -5\n", psentinel -> id);
+    printk("psentinel id is %lu, should be -5\n", psentinel -> id); // I got in terminal: psentinel id is 18446744073709551611, should be -5
 
     printk("doing get_channel_ptr\n");
     // Getting pointer to the ch_node corresponding to the channel_id.
@@ -292,6 +292,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
             return -EFAULT;
         }
     }
+    printk("message that was written: %s\n", ptarget -> msg);
     ptarget -> msg_len = length;
     // Note that there is no need for overwriting previous messages since next read() will only read msg_len bytes. 
     printk("num of bytes written was %zu", ptarget -> msg_len);
