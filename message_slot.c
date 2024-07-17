@@ -216,7 +216,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     ptarget = get_channel_ptr(channel_id, psentinel);
 
     // Checking if a channel has been set on the file descriptor (i.e. if ioctl has already been called on it)
-    // MAYA - WHAT AM I EVEN CHECKING HERE????
+
     if(ptarget == NULL) 
     {
         printk("No channel set on file descriptor\n");
@@ -298,7 +298,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     // Getting pointer to the ch_node corresponding to the channel_id.
     ptarget = get_channel_ptr(channel_id, psentinel);
     
-    printk("checking if channel has been set on file descriptor\n"); // MAYA - WHAT AM I EVEN CHECKING HERE????
+    printk("checking if channel has been set on file descriptor\n"); 
     // Checking if a channel has been set on the file descriptor (i.e. if ioctl has already been called on it)
     if(ptarget == NULL) 
     {

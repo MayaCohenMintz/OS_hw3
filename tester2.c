@@ -11,7 +11,7 @@
 #include "math.h"
 
 #define BUFF_SIZE 128
-int DEBUG = 0; /*change to 1 to see PASSING tests*/
+int DEBUG = 1; /*change to 1 to see PASSING tests*/
 int status=1;
 char* channels_msg[1024];
 
