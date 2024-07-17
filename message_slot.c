@@ -307,11 +307,11 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned
 
     printk("Invoked device_ioctl (%p,%u,%ld)\n", file, ioctl_command, channel_id);
     print_devices_array(); 
-    printk("MESSAGE_SLOT_CHANNEL: %lu", MESSAGE_SLOT_CHANNEL);
+    printk("MESSAGE_SLOT_CHANNEL: %lu", MSG_SLOT_CHANNEL);
 
 
     // Validate input
-    if(ioctl_command != MESSAGE_SLOT_CHANNEL)
+    if(ioctl_command != MSG_SLOT_CHANNEL)
     {
         printk(KERN_INFO "Invalid ioctl command: command was %lu and not MESSAGE_SLOT_CHANNEL\n", channel_id);
         return -EINVAL;

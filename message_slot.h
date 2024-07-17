@@ -2,9 +2,10 @@
 #define MESSAGE_SLOT
 
 #include <linux/ioctl.h>
+#include <stdlib.h>
 
 #define MAJOR_NUM 235
-#define MESSAGE_SLOT_CHANNEL (_IOW(MAJOR_NUM, 0, unsigned long)) 
+#define MSG_SLOT_CHANNEL (_IOW(MAJOR_NUM, 0, unsigned long)) 
 #define DEVICE_RANGE_NAME "message_slot"
 #define BUF_LEN 128 
 #define DEVICE_FILE_NAME "message_slot_device"
