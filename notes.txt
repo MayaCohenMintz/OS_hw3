@@ -41,4 +41,6 @@ Q:what is expected behavior when trying to write empty string with message_sende
 
 A: device_write should return -1 and errno set to EMSGSIZE
 
-Q: is it legit to check if pointer to buffer is a NULL pointer? Roy doesn't
+Q: is it legit to check if pointer to buffer is a NULL pointer? Roy doesn't. Check if get/put_user is supposed to catch this!!
+
+

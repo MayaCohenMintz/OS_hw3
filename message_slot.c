@@ -195,7 +195,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     // checking if the channel has been set with ioctl 
     if(channel_id == 0) // id channel_id is 0 that means that the private_data has not yet been set in ioctl
     {
-        printk("No channel set on file descriptor\n");
+        printk("Invalid argument: No channel set on file descriptor\n");
         return -EINVAL;
     }
 
@@ -358,7 +358,7 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command, unsigned
     
     else if (channel_id == 0)
     {
-        printk(KERN_INFO "Invalid channel id");
+        printk(KERN_INFO "Invalid argument - channel id");
         return -EINVAL; 
     }
     printk("channel id is: %lu (non zero)\n", channel_id);

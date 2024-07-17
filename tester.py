@@ -55,7 +55,8 @@ def create_slot_file(template, minor_num):
         delete_all_files()
         exit(-1)
     execute(f"test ! -f {filename} && sudo mknod {filename} c 235 {minor_num} || echo '' > /dev/null")
-    execute(f"sudo chmod o+rw {filename}")
+    ## execute(f"sudo chmod o+rw {filename}")
+    execute(f"sudo chmod 777 {filename}")
     FILE_NAMES[filename] = {}
     return filename
 
