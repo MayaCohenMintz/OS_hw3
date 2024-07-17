@@ -40,3 +40,5 @@ Q:what is expected behavior when trying to write empty string with message_sende
     Error in writing message to channel: Message too long
 
 A: device_write should return -1 and errno set to EMSGSIZE
+
+Q: is it legit to check if pointer to buffer is a NULL pointer? Roy doesn't
