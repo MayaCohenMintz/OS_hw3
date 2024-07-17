@@ -199,6 +199,17 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
         return -EINVAL;
     }
 
+    printk("checking if buffer is a null pointer: ");
+    if(buffer == NULL)
+    {
+        printk("buffer is a null pointer!");
+        return -EINVAL;
+    }
+    else
+    {
+        printk("not a null pointer \n");
+    }
+
     printk("psentinel is: %p. id is %lu, should be 0 since this is sentinel", psentinel, psentinel -> id);
     printk("doing get_channel_ptr\n");
     // Getting pointer to the ch_node corresponding to the channel_id.
@@ -219,6 +230,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
         printk(KERN_ERR "No message exists on channel with id %lu \n", channel_id);
         return -EWOULDBLOCK;
     }
+
     printk("checking buffer size: ");
     // Check if provided buffer in user space is of sufficient size
     if(length < ptarget -> msg_len)
@@ -265,6 +277,17 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     {
         printk("No channel set on file descriptor\n");
         return -EINVAL;
+    }
+
+    printk("checking if buffer is a null pointer: ");
+    if(buffer == NULL)
+    {
+        printk("buffer is a null pointer!");
+        return -EINVAL;
+    }
+    else
+    {
+        printk("not a null pointer \n");
     }
 
     psentinel = devices_array[minor_num];
